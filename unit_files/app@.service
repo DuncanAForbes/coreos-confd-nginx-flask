@@ -1,0 +1,19 @@
+[Unit]
+Description=My Flask app
+Requires=etcd.service
+Requires=docker.service
+Requires=app-discovery@%i.service
+After=etcd.service
+After=docker.service
+Before=app-discovery@%i.service
+
+[Service]
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill app-%i
+ExecStartPre=-/usr/bin/docker rm app-%i
+ExecStartPre=/usr/bin/docker pull allanino/flask
+ExecStart=/usr/bin/docker run -rm --name app-%i -p 5000 allanino/flask %i
+ExecStop=/usr/bin/docker stop app-%i
+
+[X-Fleet]
+Conflicts=app@%i.service
