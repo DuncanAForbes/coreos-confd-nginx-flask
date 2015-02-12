@@ -25,7 +25,7 @@ EnvironmentFile=/etc/environment
 ExecStartPre=-/usr/bin/docker kill nginx
 ExecStartPre=-/usr/bin/docker rm nginx
 ExecStartPre=/usr/bin/docker pull allanino/nginx
-ExecStart=/usr/bin/docker run --name nginx -p ${COREOS_PUBLIC_IPV4}:80:80 \
+ExecStart=/usr/bin/docker run --name nginx -e HOST_IP=${COREOS_PUBLIC_IPV4} -p ${COREOS_PUBLIC_IPV4}:80:80 \
 allanino/nginx /usr/local/bin/confd-watch
 
 # Stop
