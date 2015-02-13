@@ -2,7 +2,7 @@ FROM ubuntu:14.04
 MAINTAINER Allan Costa <allaninocencio@yahoo.com.br>
 
 RUN apt-get update
-RUN apt-get --no-install-recommends install -y python-setuptools build-essential python-dev libpq-dev ca-certificates
+RUN apt-get install -y python-setuptools
 
 # Install pip
 RUN easy_install pip
