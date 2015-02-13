@@ -1,0 +1,15 @@
+[Unit]
+Description=Server using Fleet to launch new Flask containers on demand
+Requires=etcd.service
+Requires=docker.service
+After=etcd.service
+After=docker.service
+
+[Service]
+TimeoutStartSec=0
+EnvironmentFile=/etc/environment
+ExecStartPre=-/usr/bin/docker kill launcher
+ExecStartPre=-/usr/bin/docker rm launcher
+ExecStartPre=/usr/bin/docker pull allanino/launcher
+ExecStart=/usr/bin/docker run --rm --name launcher -e HOST_IP=${COREOS_PRIVATE_IPV4} -p 5000 -v /usr/bin/fleetctl:/usr/bin/fleetctl allanino/launcher
+ExecStop=/usr/bin/docker stop launcher
