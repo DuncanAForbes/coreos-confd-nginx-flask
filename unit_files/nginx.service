@@ -2,8 +2,10 @@
 Description=Nginx reverse proxy for Flask apps
 Requires=etcd.service
 Requires=docker.service
+Requires=launcher.service
 After=etcd.service
 After=docker.service
+After=launcher.service
 
 [Service]
 TimeoutStartSec=0
