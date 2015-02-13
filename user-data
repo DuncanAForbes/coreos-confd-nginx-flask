@@ -1,0 +1,108 @@
+#cloud-config
+
+coreos:
+  etcd:
+    # generate a new token for each unique cluster from https://discovery.etcd.io/new
+    # WARNING: replace each time you 'vagrant destroy'
+    discovery: https://discovery.etcd.io/1b2b129d4e2001313849c5613ba289ef
+    addr: $public_ipv4:4001
+    peer-addr: $public_ipv4:7001
+  fleet:
+    public-ip: $public_ipv4
+  units:
+    - name: etcd.service
+      command: start
+    - name: fleet.service
+      command: start
+    - name: docker-tcp.socket
+      command: start
+      enable: true
+      content: |
+        [Unit]
+        Description=Docker Socket for the API
+
+        [Socket]
+        ListenStream=2375
+        Service=docker.service
+        BindIPv6Only=both
+
+        [Install]
+        WantedBy=sockets.target
+write_files:
+  - path: /home/core/.dockercfg
+    owner: core:core
+    permissions: 0644
+    content: |
+      {
+        "https://index.docker.io/v1/": {
+          "auth": ".........=",
+          "email": "a...@fgh.com"
+        }
+      }
+  - path: /home/core/nginx.service
+    owner: core:core
+    permissions: 0644
+    content: |
+      [Unit]
+      Description=Nginx reverse proxy for Flask apps
+      Requires=etcd.service
+      Requires=docker.service
+      After=etcd.service
+      After=docker.service
+
+      [Service]
+      TimeoutStartSec=0
+      KillMode=none
+      EnvironmentFile=/etc/environment
+      ExecStartPre=-/usr/bin/docker kill nginx
+      ExecStartPre=-/usr/bin/docker rm nginx
+      ExecStartPre=/usr/bin/docker pull allanino/nginx
+      ExecStart=/usr/bin/docker run --name nginx -e HOST_IP=${COREOS_PUBLIC_IPV4} -p ${COREOS_PUBLIC_IPV4}:80:80 \
+      allanino/nginx /usr/local/bin/confd-watch
+      ExecStop=/usr/bin/docker stop nginx
+
+      [X-Fleet]
+      Conflicts=nginx.service
+      Conflicts=app@*.service
+  - path: /home/core/app@.service
+    owner: core:core
+    permissions: 0644
+    content: |
+      [Unit]
+      Description=My Flask app
+      Requires=etcd.service
+      Requires=docker.service
+      Requires=app-discovery@%i.service
+      After=etcd.service
+      After=docker.service
+      Before=app-discovery@%i.service
+
+      [Service]
+      TimeoutStartSec=0
+      ExecStartPre=-/usr/bin/docker kill app-%i
+      ExecStartPre=-/usr/bin/docker rm app-%i
+      ExecStartPre=/usr/bin/docker pull allanino/flask
+      ExecStart=/usr/bin/docker run -rm --name app-%i -p 5000 allanino/flask %i
+      ExecStop=/usr/bin/docker stop app-%i
+
+      [X-Fleet]
+      Conflicts=app@%i.service
+  - path: /home/core/app-discovery@.service
+    owner: core:core
+    permissions: 0644
+    content: |
+      [Unit]
+      Description=Flask app etcd registration
+      Requires=etcd.service
+      Requires=app@%i.service
+      After=etcd.service
+      After=app@%i.service
+      BindsTo=app@%i.service
+
+      [Service]
+      EnvironmentFile=/etc/environment
+      ExecStart=/bin/bash -c 'PORT=$(docker port app-%i 5000 | cut -d : -f 2); while [ ${#PORT} -eq 0 ]; do PORT=$(docker port app-%i 5000 | cut -d : -f 2); sleep 2; done; while true; do HOST=${COREOS_PRIVATE_IPV4}:$(docker port app-%i 5000 | cut -d : -f 2); echo $HOST; curl -f $HOST ; if [ $? -eq 0 ]; then etcdctl set /services/clusters/%i $HOST --ttl 15; else etcdctl rm /services/clusters/%i; fi; sleep 10; done'
+      ExecStop=/usr/bin/etcdctl rm /services/clusters/%i
+
+      [X-Fleet]
+      X-ConditionMachineOf=app@%i.service
