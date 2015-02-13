@@ -1,8 +1,27 @@
+upstream launcher {
+    server {{getv "/services/launcher"}};
+}
+
 server {
     listen 80 default_server;
     listen [::]:80 default_server ipv6only=on;
 
     access_log /var/log/nginx/access.log;
+
+
+    location / {
+        error_page 404 = @try_init;
+    }
+
+    location @try_init {
+        rewrite ^\/(.+)$ /create/$1 break;
+        proxy_pass http://launcher;
+        proxy_redirect off;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    }
 
 {{range gets "/services/clusters/*"}}
     location /{{base .Key}} {
@@ -14,4 +33,5 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 {{end}}
+
 }
