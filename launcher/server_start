@@ -6,19 +6,24 @@ import subprocess
 import os
 
 def start_container(name):
-    service_load = subprocess.check_output(["fleetctl" ,
-                                              "--endpoint=http://%s:4001" % os.environ['HOST_IP'],
-                                              "load",
-                                              "app@%s.service" % name,
-                                              "app-discovery@%s.service" % name])
-    if re.search(r'Unit [\w@\-]+.service loaded on', service_load):
-        service_start = subprocess.check_output(["fleetctl" ,
-                                                 "--endpoint=http://%s:4001" % os.environ['HOST_IP'],
-                                                 "start",
-                                                 "app@%s.service" % name])
-        if re.search(r'Unit [\w@\-]+.service launched on', service_start):
-            return True
-
+    # Check if it's not already started
+    service_check = subprocess.check_output(["fleetctl",
+                                             "--endpoint=http://%s:4001" % os.environ['HOST_IP'],
+                                             "status",
+                                             "app@%s" % name])
+    if re.search(r'Unit [\w@\-]+.service does not exist', service_check):
+        service_load = subprocess.check_output(["fleetctl" ,
+                                                  "--endpoint=http://%s:4001" % os.environ['HOST_IP'],
+                                                  "load",
+                                                  "app@%s.service" % name,
+                                                  "app-discovery@%s.service" % name])
+        if re.search(r'Unit [\w@\-]+.service loaded on', service_load):
+            service_start = subprocess.check_output(["fleetctl" ,
+                                                     "--endpoint=http://%s:4001" % os.environ['HOST_IP'],
+                                                     "start",
+                                                     "app@%s.service" % name])
+            if re.search(r'Unit [\w@\-]+.service launched on', service_start):
+                return True
     return False
 
 class HTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
@@ -44,6 +49,11 @@ class HTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                     self.end_headers()
                     self.wfile.write('Failed launching application for %s' % name)
                     return
+        elif re.match(r'/ping$', self.path):
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/text')
+            self.end_headers()
+            self.wfile.write('Launched application for %s' % name)
 
         # Everything else, return not found
         self.send_response(404)
