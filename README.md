@@ -41,7 +41,7 @@ docker push allanino/flask
 ```
 ### Setting up the CoreOS cluster
 We need to login to on machine in our clusters and create the service files available
-in `unit_files/`.
+in `unit_files/` (or they'll be already there if we used the provided `user-data`).
 
 We can them load and start the NGINX server:
 ```
