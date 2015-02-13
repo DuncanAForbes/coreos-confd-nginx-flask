@@ -14,7 +14,8 @@ server {
     }
 
     location @try_init {
-        rewrite ^\/(.+)$ /create/$1 break;
+        # Rewrite the URL: /id/name/dosomething => /create/id
+        rewrite ^\/([^.\/]+)\/*(.*)$ /create/$1 break;
         proxy_pass http://launcher;
         proxy_redirect off;
         proxy_set_header Host $host;
