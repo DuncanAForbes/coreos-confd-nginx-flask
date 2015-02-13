@@ -1,0 +1,59 @@
+#!/usr/bin/python
+import SimpleHTTPServer
+import SocketServer
+import re
+import subprocess
+import os
+
+def start_container(name):
+    service_load = subprocess.check_output(["fleetctl" ,
+                                              "--endpoint=http://%s:4001" % os.environ['HOST_IP'],
+                                              "load",
+                                              "app@%s.service" % name,
+                                              "app-discovery@%s.service" % name])
+    if re.search(r'Unit [\w@\-]+.service loaded on', service_load):
+        service_start = subprocess.check_output(["fleetctl" ,
+                                                 "--endpoint=http://%s:4001" % os.environ['HOST_IP'],
+                                                 "start",
+                                                 "app@%s.service" % name])
+        if re.search(r'Unit [\w@\-]+.service launched on', service_start):
+            return True
+
+    return False
+
+class HTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+
+    def _isavailable(self, name):
+        return True
+
+    def do_GET(self):
+        name_match = re.match(r'/create/([A-Za-z0-9_]+)$', self.path)
+        if name_match:
+            name = name_match.group(1)
+            if self._isavailable(name):
+                is_starting = start_container(name)
+                if is_starting:
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/text')
+                    self.end_headers()
+                    self.wfile.write('Launched application for %s' % name)
+                    return
+                else:
+                    self.send_response(400)
+                    self.send_header('Content-Type', 'application/text')
+                    self.end_headers()
+                    self.wfile.write('Failed launching application for %s' % name)
+                    return
+
+        # Everything else, return not found
+        self.send_response(404)
+        self.send_header('Content-Type', 'application/text')
+        self.end_headers()
+        self.wfile.write('Not found')
+        return
+
+if __name__== '__main__':
+    httpd = SocketServer.TCPServer(("", 5000), HTTPRequestHandler)
+    print "Serving at port 5000"
+    httpd.serve_forever()
+    httpd.server_close()
