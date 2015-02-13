@@ -4,7 +4,7 @@ coreos:
   etcd:
     # generate a new token for each unique cluster from https://discovery.etcd.io/new
     # WARNING: replace each time you 'vagrant destroy'
-    discovery: https://discovery.etcd.io/1b2b129d4e2001313849c5613ba289ef
+    discovery: https://discovery.etcd.io/f5ffd80988ab18611ab643fc0b04c2c5
     addr: $public_ipv4:4001
     peer-addr: $public_ipv4:7001
   fleet:
@@ -106,3 +106,42 @@ write_files:
 
       [X-Fleet]
       X-ConditionMachineOf=app@%i.service
+  - path: /home/core/launcher.service
+    owner: core:core
+    permissions: 0644
+    content: |
+      [Unit]
+      Description=Server using Fleet to launch new Flask containers on demand
+      Requires=etcd.service
+      Requires=docker.service
+      After=etcd.service
+      After=docker.service
+      Before=nginx.service
+
+      [Service]
+      TimeoutStartSec=0
+      EnvironmentFile=/etc/environment
+      ExecStartPre=-/usr/bin/docker kill launcher
+      ExecStartPre=-/usr/bin/docker rm launcher
+      ExecStartPre=/usr/bin/docker pull allanino/launcher
+      ExecStart=/usr/bin/docker run --rm --name launcher -e HOST_IP=${COREOS_PRIVATE_IPV4} -p 5000 -v /usr/bin/fleetctl:/usr/bin/fleetctl allanino/launcher
+      ExecStop=/usr/bin/docker stop launcher
+  - path: /home/core/launcher-discovery.service
+    owner: core:core
+    permissions: 0644
+    content: |
+      [Unit]
+      Description=Launcher registration
+      Requires=etcd.service
+      Requires=launcher.service
+      After=etcd.service
+      After=launcher.service
+      BindsTo=launcher.service
+
+      [Service]
+      EnvironmentFile=/etc/environment
+      ExecStart=/bin/bash -c 'PORT=$(docker port launcher 5000 | cut -d : -f 2); while [ ${#PORT} -eq 0 ]; do PORT=$(docker port launcher 5000 | cut -d : -f 2); sleep 2; done; while true; do HOST=${COREOS_PRIVATE_IPV4}:$(docker port launcher 5000 | cut -d : -f 2); HTTP_CODE=$(curl -Is $HOST/bogus | grep \'404 File not found\' | cut -d \' \' -f 2); echo HTTP_CODE; if [ "$HTTP_CODE" -eq "404" ]; then etcdctl set /services/launcher $HOST --ttl 15; else etcdctl rm /services/launcher; fi; sleep 10; done'
+      ExecStop=/usr/bin/etcdctl rm /services/launcher
+
+      [X-Fleet]
+      X-ConditionMachineOf=launcher.service
