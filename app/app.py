@@ -6,11 +6,11 @@ app = Flask(__name__)
 app.config['NAME'] = 'def'
 @app.route('/')
 def hello_world():
-    return 'Hello World!'
+    return 'Hello World!\n'
 
 @app.route('/name')
 def hello_name():
-    return 'Name is %s' % app.config['NAME']
+    return 'Name is %s\n' % app.config['NAME']
 
 if __name__ == '__main__':
     app.config['NAME'] = sys.argv[1]
