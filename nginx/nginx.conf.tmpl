@@ -1,5 +1,7 @@
 upstream launcher {
-    server {{getv "/services/launcher"}};
+{{range getvs "/services/launchers/*"}}
+    server {{.}};
+{{end}}
 }
 
 server {
@@ -24,7 +26,7 @@ server {
 
     }
 
-{{range gets "/services/clusters/*"}}
+{{range gets "/services/apps/*"}}
     location /{{base .Key}} {
         rewrite           ^/{{base .Key}}/(.*) /$1 break;
         proxy_pass http://{{.Value}};
