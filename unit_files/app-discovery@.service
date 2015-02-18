@@ -8,8 +8,10 @@ BindsTo=app@%i.service
 
 [Service]
 EnvironmentFile=/etc/environment
-ExecStart=/bin/bash -c 'PORT=$(docker port app-%i 5000 | cut -d : -f 2); while [ ${#PORT} -eq 0 ]; do PORT=$(docker port app-%i 5000 | cut -d : -f 2); sleep 2; done; while true; do HOST=${COREOS_PRIVATE_IPV4}:$(docker port app-%i 5000 | cut -d : -f 2); curl -f $HOST ; if [ $? -eq 0 ]; then etcdctl set /services/clusters/%i $HOST --ttl 15; else etcdctl rm /services/clusters/%i; fi; sleep 10; done'
-ExecStop=/usr/bin/etcdctl rm /services/clusters/%i
+Restart=always
+RestartSec=1s
+ExecStart=/bin/bash -c 'PORT=$(docker port app-%i 5000 | cut -d : -f 2); while [ ${#PORT} -eq 0 ]; do PORT=$(docker port app-%i 5000 | cut -d : -f 2); sleep 2; done; while true; do HOST=${COREOS_PRIVATE_IPV4}:$(docker port app-%i 5000 | cut -d : -f 2); curl -f $HOST ; if [ $? -eq 0 ]; then etcdctl set /services/apps/%i $HOST --ttl 15; else etcdctl rm /services/apps/%i; fi; sleep 10; done'
+ExecStop=/usr/bin/etcdctl rm /services/apps/%i
 
 [X-Fleet]
 X-ConditionMachineOf=app@%i.service

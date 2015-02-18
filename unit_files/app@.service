@@ -9,6 +9,8 @@ Before=app-discovery@%i.service
 
 [Service]
 TimeoutStartSec=0
+Restart=always
+RestartSec=1s
 ExecStartPre=-/usr/bin/docker kill app-%i
 ExecStartPre=-/usr/bin/docker rm app-%i
 ExecStartPre=/usr/bin/docker pull allanino/flask
