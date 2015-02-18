@@ -18,8 +18,11 @@ echo "[nginx] Config file:"
 cat /etc/nginx/sites-enabled/nginx.conf | xargs -L1 echo
 
 # Put a continual polling `confd` process into the background to watch
-# for changes every 10 seconds
-confd -interval 10 -node $ETCD -config-file /etc/confd/conf.d/nginx.toml &
+# for changes every $PRIME_NUMBER seconds (to avoid servers updating in the same
+# time)
+primes=(11 13 17 19 23 29 31 37 41 43)
+
+confd -interval ${primes[$1]} -node $ETCD -config-file /etc/confd/conf.d/nginx.toml &
 echo "[nginx] confd is now monitoring etcd for changes..."
 
 # Start the Nginx service using the generated config

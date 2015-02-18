@@ -17,7 +17,7 @@ ExecStartPre=-/usr/bin/docker kill nginx-%i
 ExecStartPre=-/usr/bin/docker rm nginx-%i
 ExecStartPre=/usr/bin/docker pull allanino/nginx
 ExecStart=/usr/bin/docker run --name nginx-%i -e HOST_IP=${COREOS_PUBLIC_IPV4} -p ${COREOS_PUBLIC_IPV4}:80:80 \
-allanino/nginx /usr/local/bin/confd-watch
+allanino/nginx /usr/local/bin/confd-watch %i
 ExecStop=/usr/bin/docker stop nginx-%i
 
 [X-Fleet]
