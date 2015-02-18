@@ -52,17 +52,17 @@ docker push allanino/flask
 We need to login to on machine in our clusters and create the service files available
 in `unit_files/` (or they'll be already there if we used the provided `user-data`).
 
-We can them load and start the NGINX server and the launcher:
+First, we submit out templates service files and their sidekicks to register them:
 ```
-fleetctl load launcher.service launcher-discovery.service
-fleetctl start launcher.service
-fleetctl load nginx.service
-fleetctl start nginx.service
+fleetctl submit nginx@.service app@.service app-discovery@.service \
+  launcher@.service launcher-discovery@.service
 ```
 
-Next, we submit out application template service file and it's sidekick to register it:
+We can them load and start the NGINX servers and the launchers:
 ```
-fleetctl submit app@.service app-discovery@.service
+fleetctl load launcher@{1,2} launcher-discovery@{1,2} \
+  nginx@{1,2}
+fleetctl start nginx@{1,2}
 ```
 
 Now we can load and start multiples applications:
