@@ -6,7 +6,7 @@ export ETCD_PORT=${ETCD_PORT:-4001}
 export HOST_IP=${HOST_IP:-172.17.42.1}
 export ETCD=$HOST_IP:$ETCD_PORT
 
-echo "[nginx] Booting container. ETCD: $ETCD. Parameter: $2"
+echo "[nginx] Booting container. ETCD: $ETCD."
 
 # Try to make initial configuration every 5 seconds until successful
 until confd -onetime -node $ETCD -config-file /etc/confd/conf.d/nginx.toml; do
@@ -23,7 +23,7 @@ cat /etc/nginx/sites-enabled/nginx.conf | xargs -L1 echo
 primes=(11 13 17 19 23 29 31 37 41 43)
 
 confd -interval ${primes[$2]} -node $ETCD -config-file /etc/confd/conf.d/nginx.toml &
-echo "[nginx] confd is now monitoring etcd for changes..."
+echo "[nginx] confd is now monitoring etcd for changes in intervals of ${primes[$2]} seconds..."
 
 # Start the Nginx service using the generated config
 echo "[nginx] starting nginx service..."
