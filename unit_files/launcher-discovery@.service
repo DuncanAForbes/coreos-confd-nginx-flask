@@ -10,7 +10,21 @@ BindsTo=launcher@%i.service
 EnvironmentFile=/etc/environment
 Restart=always
 RestartSec=1s
-ExecStart=/bin/bash -c 'PORT=$(docker port launcher-%i 5000 | cut -d : -f 2); while [ ${#PORT} -eq 0 ]; do PORT=$(docker port launcher-%i 5000 | cut -d : -f 2); sleep 2; done; while true; do HOST=${COREOS_PRIVATE_IPV4}:$(docker port launcher-%i 5000 | cut -d : -f 2); PING=$(curl $HOST/ping); if [ "$PING" == "Up!" ]; then etcdctl set /services/launchers/%i $HOST --ttl 15; else etcdctl rm /services/launchers/%i; fi; sleep 10; done'
+ExecStart=/bin/bash -c 'PORT=$(docker port launcher-%i 5000 | cut -d : -f 2);\
+  while [ -z "$PORT" ]; do \
+    PORT=$(docker port launcher-%i 5000 | cut -d : -f 2); \
+    sleep 2; \
+  done; \
+  while true; do \
+    HOST=${COREOS_PRIVATE_IPV4}:$(docker port launcher-%i 5000 | cut -d : -f 2); \
+    PING=$(curl $HOST/ping); \
+    if [ "$PING" == "Up!" ]; then \
+      etcdctl set /services/launchers/%i $HOST --ttl 15; \
+    else \
+      etcdctl rm /services/launchers/%i; \
+    fi; \
+    sleep 10; \
+  done'
 ExecStop=/usr/bin/etcdctl rm /services/launchers/%i
 
 [X-Fleet]
