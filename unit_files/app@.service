@@ -9,12 +9,13 @@ Before=app-discovery@%i.service
 
 [Service]
 TimeoutStartSec=0
+EnvironmentFile=/etc/environment
 Restart=always
 RestartSec=1s
 ExecStartPre=-/usr/bin/docker kill app-%i
 ExecStartPre=-/usr/bin/docker rm app-%i
 ExecStartPre=/usr/bin/docker pull allanino/flask
-ExecStart=/usr/bin/docker run -rm --name app-%i -p 5000 allanino/flask %i
+ExecStart=/usr/bin/docker run -rm --name app-%i -e ETCD_IP=${COREOS_PRIVATE_IPV4} -e ETCD_PORT=4001 -p 5000 allanino/flask %i
 ExecStop=/usr/bin/docker stop app-%i
 
 [X-Fleet]
